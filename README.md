@@ -1,5 +1,7 @@
 # A simple geometry library
-Provides templated `point<>` (`pointu`, `pointi`, `pointf`), `size<>` (`sizeu`, `sizei`, `sizef`) and `rect<>` (`rectu`, `recti`, `rectf`, `rectn`) classes with specializations for `unsigned`, `int`, `float`.
+The goal is to provide basic geometry primitives (point, size, rectangle) with corresponding operators and functions in a modern C++.
+
+Currently provides templated `point<>` (`pointu`, `pointi`, `pointf`), `size<>` (`sizeu`, `sizei`, `sizef`) and `rect<>` (`rectu`, `recti`, `rectf`, `rectn`) classes with specializations for `unsigned`, `int`, `float`.
 
 `rectn` is a specialization for normalized rect with `int` coordinate of origin and `unsigned` size.
 
