@@ -60,7 +60,7 @@ struct point {
 
 template <typename T>
 [[nodiscard]] inline constexpr point<T> operator/(const T lhs, const point<T> & rhs) {
-	return gfx::point<T>{lhs / rhs.x, lhs / rhs.y};
+	return point<T>{lhs / rhs.x, lhs / rhs.y};
 }
 
 template <typename T>
@@ -120,8 +120,8 @@ using pointf = point<float>;
 template <typename T>
 struct size {
 public:
-	T width, height;
 	using value_type = T;
+	T width, height;
 
 	static constexpr inline size from_array(const std::array<T, 2> & arr) {
 		return { .width = std::get<0>(arr), .height = std::get<1>(arr) };
@@ -137,8 +137,8 @@ public:
 	template<typename U>
 	size<U> cast() const { return size<U>{ static_cast<U>(width), static_cast<U>(height) }; }
 
-	[[nodiscard]] static gfx::size<T> from_point(gfx::point<T> pt) { return gfx::size<T>{pt.x, pt.y}; };
-	[[nodiscard]] gfx::point<T> to_point() const { return gfx::point<T>{ width, height }; };
+	[[nodiscard]] static size<T> from_point(point<T> pt) { return size<T>{pt.x, pt.y}; };
+	[[nodiscard]] point<T> to_point() const { return point<T>{ width, height }; };
 
 	inline constexpr size<T> & operator+=(const size<T> & rhs) { width += rhs.width; height += rhs.height; return *this; }
 	inline constexpr size<T> & operator+=(T rhs) { width += rhs; height += rhs; return *this; }
@@ -229,7 +229,7 @@ public:
 	inline constexpr void move_right(T x) noexcept { x1 = x - (x2 - x1); x2 = x; }
 	inline constexpr void move_bottom(T y) noexcept { y1 = y - (y2 - y1); y2 = y; }
 	inline constexpr void move(T x, T y) noexcept { x2 = x + (x2 - x1); y2 = y + (y2 - y1); x1 = x; y1 = y; }
-	inline constexpr void move(const gfx::point<T> & org) noexcept { move(org.x, org.y); }
+	inline constexpr void move(const point<T> & org) noexcept { move(org.x, org.y); }
 	inline constexpr void resize(const size<S> & size) noexcept { x2 = x1 + size.width; y2 = y1 + size.height; }
 	[[nodiscard]] inline constexpr T top() const noexcept { return y1; }
 	[[nodiscard]] inline constexpr T left() const noexcept { return x1; }
@@ -245,7 +245,7 @@ public:
 	[[nodiscard]] inline constexpr point<T> top_right() const noexcept { return point<T>{x2, y1}; }
 	[[nodiscard]] inline constexpr point<T> bottom_left() const noexcept { return point<T>{x1, y2}; }
 	[[nodiscard]] inline constexpr point<T> bottom_right() const noexcept { return point<T>{x2, y2}; }
-	[[nodiscard]] inline constexpr gfx::size<S> size() const noexcept { return gfx::size<S>{ width(), height() }; }
+	[[nodiscard]] inline constexpr size<S> size() const noexcept { return geom::size<S>{ width(), height() }; }
 	[[nodiscard]] inline constexpr point<T> center() const noexcept {
 		return point<T>{
 			x1 + static_cast<T>(x2 - x1) / T{2},
@@ -270,7 +270,7 @@ public:
 		static_assert(std::is_integral<T>::value && std::is_integral<U>::value, "Integer required.");
 		return rect<T>(x1 * num / denom, y1 * num / denom, x2 * num / denom, y2 * num / denom);
 	}
-	inline constexpr void scale(float f, const gfx::pointi & c) {
+	inline constexpr void scale(float f, const pointi & c) {
 		x1 = c.x - (T) std::round((c.x - x1) * f);
 		x2 = c.x + (T) std::round((x2 - c.x) * f);
 		y1 = c.y - (T) std::round((c.y - y1) * f);
@@ -303,14 +303,14 @@ public:
 	}
 
 	static rect<T, S> from_size(T x, T y, S w, S h) { return rect<T, S>(x, y, x+w, y+h); }
-	rect<T, S> operator-(const gfx::size<S> & sz) { return rect<T, S>(x1, y1, x2 - sz.width(), y2 - sz.height()); }
+	rect<T, S> operator-(const geom::size<S> & sz) { return rect<T, S>(x1, y1, x2 - sz.width(), y2 - sz.height()); }
 private:
 	T x1, y1, x2, y2;
 };
 
 
 template <typename T, typename U>
-gfx::point<T> clamp(gfx::point<T> pt, gfx::rect<T, U> bounds) {
+point<T> clamp(point<T> pt, rect<T, U> bounds) {
 	if (pt.x < bounds.left()) pt.x = bounds.left();
 	if (pt.x > bounds.right()) pt.x = bounds.right();
 	if (pt.y < bounds.top()) pt.y = bounds.top();
@@ -326,30 +326,27 @@ static constexpr orientation orthogonal = orientation::hor;
 template <> constexpr orientation orthogonal<orientation::hor> = orientation::vert;
 
 
-template <typename T>
-[[nodiscard]] inline unsigned mip_levels(const soup::gfx::size<T> & base_size) noexcept {
+template <std::unsigned_integral T>
+[[nodiscard]] inline unsigned mip_levels(const size<T> & base_size) noexcept {
 	static_assert(std::is_unsigned_v<T>, "Must be unsigned");
 	return (sizeof(T) << 3) - std::countl_zero(std::min(base_size.width, base_size.height));
 }
 
-template <typename T>
-[[nodiscard]] inline unsigned mip_levels(const soup::gfx::size<T> & base_size, unsigned trim_levels) noexcept {
-	static_assert(std::is_unsigned_v<T>, "Must be unsigned");
+template <std::unsigned_integral T>
+[[nodiscard]] inline unsigned mip_levels(const size<T> & base_size, unsigned trim_levels) noexcept {
 	auto l = mip_levels(base_size);
 	return (l > trim_levels + 1u) ? (l - trim_levels) : 1u;
 }
 
-template <typename T>
-[[nodiscard]] inline soup::gfx::size<T> mip_size(const soup::gfx::size<T> & base_size, unsigned level) {
-	static_assert(std::is_integral_v<T>);
-	return soup::gfx::size<T>{ .width = base_size.width / (1u << level),
+template <std::unsigned_integral T>
+[[nodiscard]] inline size<T> mip_size(const size<T> & base_size, unsigned level) {
+	return size<T>{ .width = base_size.width / (1u << level),
 		.height = base_size.height / (1u << level) };
 }
 
 /// nearest mip level to be minified
-template <typename T>
-requires std::unsigned_integral<T>
-[[nodiscard]] constexpr inline unsigned nearest_mip_level(const gfx::size<T> & base_size, const gfx::size<T> request_size) {
+template <std::unsigned_integral T>
+[[nodiscard]] constexpr inline unsigned nearest_mip_level(const size<T> & base_size, const size<T> request_size) {
 	if (request_size.width >= base_size.width || request_size.height >= base_size.height)
 		return 0u;
 	const uint32_t z = std::min(base_size.width / request_size.width,
