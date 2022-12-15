@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="geom::point&lt;*&gt;">
+    <DisplayString>{{ {x}, {y} }}</DisplayString>
+  </Type>
+  <Type Name="geom::size&lt;*&gt;">
+    <DisplayString>{{ {width}&#215;{height} }}</DisplayString>
+  </Type>
+  <Type Name="geom::rect&lt;*, *&gt;">
+    <DisplayString>{{ ({x1}, {y1}), ({x2}, {y2}), ({x2-x1}&#215;{y2-y1}) }}</DisplayString>
+  </Type>
+</AutoVisualizer>
