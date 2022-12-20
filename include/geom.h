@@ -5,6 +5,7 @@
 #include <Windows.h> /// for POINT, POINTF, SIZE
 #endif
 #include <numbers> /// for pi
+#include <optional>
 
 /// point, size, rect classes
 
@@ -152,7 +153,7 @@ public:
 		return *this;
 	}
 	inline constexpr size<T> & operator/=(const T & divider) { width /= divider; height /= divider; return *this; }
-	
+
 	template <typename U>
 	size<U> round() const;
 	template <>
@@ -252,6 +253,7 @@ public:
 			y1 + static_cast<T>(y2 - y1) / T{2}
 		};
 	}
+	[[nodiscard]] inline constexpr bool empty() const noexcept { return x2 == x1 || y2 == y1; }
 	[[nodiscard]] inline constexpr bool contains(T x, T y) const noexcept { return x1 <= x && x < x2 && y1 <= y && y < y2; }
 	[[nodiscard]] inline constexpr bool contains(const point<T> & pt) const noexcept { return contains(pt.x, pt.y); }
 	[[nodiscard]] inline constexpr rect<T, S> translated(T dx, T dy) const noexcept { return rect<T, S>(x1 + dx, y1 + dy, x2 + dx, y2 + dy); }
