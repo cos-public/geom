@@ -30,6 +30,7 @@ struct point {
 
 	T x, y;
 #ifdef _WIN32
+	/// to keep the class aggregate do not introduce a constructor
 	static constexpr inline point from_POINT(const POINT & pt) {
 		static_assert(std::is_integral_v<T>, "Narrowing conversion");
 		return { T{pt.x}, T{pt.y} };
@@ -124,8 +125,9 @@ public:
 	using value_type = T;
 	T width, height;
 
+	/// to keep the class aggregate do not introduce a constructor
 	static constexpr inline size from_array(const std::array<T, 2> & arr) {
-		return { .width = std::get<0>(arr), .height = std::get<1>(arr) };
+		return size{ .width = std::get<0>(arr), .height = std::get<1>(arr) };
 	}
 #ifdef _WIN32
 	static constexpr inline size from_SIZE(const SIZE & sz) {
@@ -210,13 +212,11 @@ public:
 		}
 	}
 #ifdef _WIN32
-	constexpr rect(const RECT & rect) : x1(rect.left), y1(rect.top), x2(rect.right), y2(rect.bottom) {
-		if constexpr (std::is_unsigned_v<S>) {
-			if (x2 < x1 || y2 < y1) {
-				throw std::invalid_argument("Negative unsigned rect dimension");
-			}
-		}
-	}
+	explicit constexpr rect(const RECT & rc) : rect(rc.left, rc.top, rc.right, rc.bottom) {}
+	explicit constexpr operator RECT() const noexcept { return { x1, y1, x2, y2 }; }
+	/// for API which requires const RECT *
+	/// usage like: ::MonitorFromRect(window_rect.pRECT().get(), MONITOR_DEFAULTTONULL);
+	std::unique_ptr<const RECT> pRECT() const { return std::make_unique<const RECT>(*this); }
 #endif
 	constexpr rect(const point<T> & org, const size<S> & size) noexcept : x1(org.x), y1(org.y), x2(org.x + size.width), y2(org.y + size.height) {}
 	constexpr rect(const point<T> & org, const point<T> & dest) noexcept : x1(org.x), y1(org.y), x2(dest.x), y2(dest.y) {}
@@ -293,12 +293,6 @@ public:
 		return rect<T, S>(std::max(x1, other.x1), std::max(y1, other.y1),
 			std::min(x2, other.x2), std::min(y2, other.y2));
 	}
-#ifdef _WIN32
-	inline constexpr operator RECT() const noexcept { return { x1, y1, x2, y2 }; }
-	/// for API which requires const RECT *
-	/// usage like: ::MonitorFromRect(window_rect.pRECT().get(), MONITOR_DEFAULTTONULL);
-	std::unique_ptr<const RECT> pRECT() const { return std::make_unique<const RECT>(*this); }
-#endif //_WIN32
 	template<typename T2, typename S2 = T2>
 	rect<T2, S2> cast() const {
 		return rect<T2, S2>{static_cast<T2>(x1), static_cast<T2>(y1), static_cast<T2>(x2), static_cast<T2>(y2)};
