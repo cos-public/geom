@@ -4,8 +4,12 @@
 #if defined _WIN32
 #include <Windows.h> /// for POINT, POINTF, SIZE
 #endif
+#include <algorithm> /// for minmax
+#include <memory> /// for unique_ptr
 #include <numbers> /// for pi
 #include <optional>
+#include <cmath> /// for lroundf
+#include <stdexcept>
 
 /// point, size, rect classes
 
@@ -58,6 +62,10 @@ struct point {
 	point<U> round() const;
 	template <>
 	point<int> round() const { return point<int>{ std::lroundf(x), std::lroundf(y) }; }
+	[[nodiscard]] T manhattan_length() const {
+		const auto & [min, max] = std::minmax(x, y);
+		return max - min;
+	}
 };
 
 template <typename T>
@@ -160,6 +168,16 @@ public:
 	size<U> round() const;
 	template <>
 	size<unsigned> round() const { return size<unsigned>{ std::lroundf(width), std::lroundf(height) }; }
+
+	[[nodiscard]] inline size<T> fitted(size<T> bounds) const {
+		const float zw = (float) bounds.width / width;
+		const float zh = (float) bounds.height / height;
+		if (zw < zh) {
+			return {bounds.width, (T) (height * zw)};
+		} else {
+			return {(T) (width * zh), bounds.height};
+		}
+	}
 };
 
 template<typename T>
@@ -212,15 +230,18 @@ public:
 		}
 	}
 #ifdef _WIN32
-	explicit constexpr rect(const RECT & rc) : rect(rc.left, rc.top, rc.right, rc.bottom) {}
-	explicit constexpr operator RECT() const noexcept { return { x1, y1, x2, y2 }; }
-	/// for API which requires const RECT *
-	/// usage like: ::MonitorFromRect(window_rect.pRECT().get(), MONITOR_DEFAULTTONULL);
-	std::unique_ptr<const RECT> pRECT() const { return std::make_unique<const RECT>(*this); }
+	constexpr rect(const RECT & rect) : x1(rect.left), y1(rect.top), x2(rect.right), y2(rect.bottom) {
+		if constexpr (std::is_unsigned_v<S>) {
+			if (x2 < x1 || y2 < y1) {
+				throw std::invalid_argument("Negative unsigned rect dimension");
+			}
+		}
+	}
 #endif
 	constexpr rect(const point<T> & org, const size<S> & size) noexcept : x1(org.x), y1(org.y), x2(org.x + size.width), y2(org.y + size.height) {}
 	constexpr rect(const point<T> & org, const point<T> & dest) noexcept : x1(org.x), y1(org.y), x2(dest.x), y2(dest.y) {}
 	explicit constexpr rect(const size<S> & size) noexcept : rect(point<T>{0, 0}, size) {}
+	static rect<T, S> from_size(T x, T y, S w, S h) { return rect<T, S>(x, y, x+w, y+h); }
 	[[nodiscard]] inline constexpr S width() const noexcept { return x2 - x1; }
 	inline constexpr void set_width(S width) noexcept { x2 = x1 + width; }
 	[[nodiscard]] inline S height() const noexcept { return y2 - y1; }
@@ -231,6 +252,12 @@ public:
 	inline constexpr void move_bottom(T y) noexcept { y1 = y - (y2 - y1); y2 = y; }
 	inline constexpr void move(T x, T y) noexcept { x2 = x + (x2 - x1); y2 = y + (y2 - y1); x1 = x; y1 = y; }
 	inline constexpr void move(const point<T> & org) noexcept { move(org.x, org.y); }
+	inline constexpr void move_center(T cx, T cy) noexcept {
+		const auto w = width(); const auto h = height();
+		x1 = cx - w / 2; y1 = cy - h / 2;
+		x2 = x1 + w; y2 = y1 + h;
+	}
+	inline constexpr void move_center(const point<T> c) noexcept { move_center(c.x, c.y); }
 	inline constexpr void resize(const size<S> & size) noexcept { x2 = x1 + size.width; y2 = y1 + size.height; }
 	[[nodiscard]] inline constexpr T top() const noexcept { return y1; }
 	[[nodiscard]] inline constexpr T left() const noexcept { return x1; }
@@ -256,17 +283,35 @@ public:
 	[[nodiscard]] inline constexpr bool empty() const noexcept { return x2 == x1 || y2 == y1; }
 	[[nodiscard]] inline constexpr bool contains(T x, T y) const noexcept { return x1 <= x && x < x2 && y1 <= y && y < y2; }
 	[[nodiscard]] inline constexpr bool contains(const point<T> & pt) const noexcept { return contains(pt.x, pt.y); }
-	[[nodiscard]] inline constexpr rect<T, S> translated(T dx, T dy) const noexcept { return rect<T, S>(x1 + dx, y1 + dy, x2 + dx, y2 + dy); }
+	[[nodiscard]] inline constexpr bool contains(const geom::rect<T, S> & inner) const noexcept {
+		return inner.x1 >= x1 && inner.y1 >= y1 && inner.x2 <= x2 && inner.y2 <= y2;
+	}
+	[[nodiscard]] inline constexpr rect<T, S> translated(T dx, T dy) const noexcept {
+		return rect<T, S>(x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+	}
 	[[nodiscard]] inline constexpr rect<T, S> translated(const point<T> & dt) const noexcept { return this->translated(dt.x, dt.y); }
 	inline constexpr void translate(T dx, T dy) noexcept { *this = translated(dx, dy); }
 	inline constexpr void translate(const point<T> & dt) noexcept { *this = translated(dt); }
-	[[nodiscard]] inline constexpr rect<T, S> adjusted(T dx1, T dy1, T dx2, T dy2) const noexcept { return rect<T>(x1 + dx1, y1 + dy1, x2 + dx2, y2 + dy2); }
-	inline constexpr void adjust(T dx1, T dy1, T dx2, T dy2) noexcept { *this = adjusted(dx1, dy1, dx2, dy2); }
-	[[nodiscard]] inline constexpr rect<T, S> expanded(T d) const noexcept { return rect<T>(x1 - d, y1 - d, x2 + d, y2 + d); }
-	[[nodiscard]] inline constexpr rect<T, S> shrinked(T d) const noexcept { return expanded(-d); }
-	[[nodiscard]] inline constexpr bool overlaps(const rect<T, S> & other) const noexcept {
-		return !(left() >= other.right() || right() <= other.left() || top() >= other.bottom() || bottom() <= other.top());
+	[[nodiscard]] inline constexpr rect<T, S> adjusted(T dx1, T dy1, T dx2, T dy2) const noexcept {
+		return rect<T>(x1 + dx1, y1 + dy1, x2 + dx2, y2 + dy2);
 	}
+	inline constexpr void adjust(T dx1, T dy1, T dx2, T dy2) noexcept { *this = adjusted(dx1, dy1, dx2, dy2); }
+	[[nodiscard]] inline constexpr rect<T, S> expanded(T d) const noexcept {
+		return rect<T>(x1 - d, y1 - d, x2 + d, y2 + d);
+	}
+	[[nodiscard]] inline constexpr rect<T, S> shrinked(T d) const noexcept { return expanded(-d); }
+	[[nodiscard]] inline constexpr rect<T, S> united(const rect<T, S> & other) const {
+		if (empty())
+			return other;
+		if (other.empty())
+			return *this;
+		return rect<T, S>{std::min(x1, other.x1), std::min(y1, other.y1), std::max(x2, other.x2), std::max(y2, other.y2)};
+	}
+	inline constexpr void unite(const rect<T, S> & other) { *this = united(other); }
+	/// intersected could be used instead
+	//[[nodiscard]] inline constexpr bool overlaps(const rect<T, S> & other) const noexcept {
+	//	return !(left() >= other.right() || right() <= other.left() || top() >= other.bottom() || bottom() <= other.top());
+	//}
 	template <typename U>
 	[[nodiscard]] inline constexpr rect<T> scaled(U num, U denom) const noexcept {
 		static_assert(std::is_integral<T>::value && std::is_integral<U>::value, "Integer required.");
@@ -293,16 +338,53 @@ public:
 		return rect<T, S>(std::max(x1, other.x1), std::max(y1, other.y1),
 			std::min(x2, other.x2), std::min(y2, other.y2));
 	}
+#ifdef _WIN32
+	[[nodiscard]] explicit inline constexpr operator RECT() const noexcept { return { x1, y1, x2, y2 }; }
+	/// for API which requires const RECT *
+	/// usage like: ::MonitorFromRect(window_rect.pRECT().get(), MONITOR_DEFAULTTONULL);
+	[[nodiscard]] std::unique_ptr<const RECT> pRECT() const { return std::make_unique<const RECT>(*this); }
+#endif //_WIN32
 	template<typename T2, typename S2 = T2>
-	rect<T2, S2> cast() const {
+	[[nodiscard]] rect<T2, S2> cast() const {
 		return rect<T2, S2>{static_cast<T2>(x1), static_cast<T2>(y1), static_cast<T2>(x2), static_cast<T2>(y2)};
 	}
 
-	static rect<T, S> from_size(T x, T y, S w, S h) { return rect<T, S>(x, y, x+w, y+h); }
-	rect<T, S> operator-(const geom::size<S> & sz) { return rect<T, S>(x1, y1, x2 - sz.width(), y2 - sz.height()); }
+	[[nodiscard]] rect<T, S> operator-(const geom::size<S> & sz) { return rect<T, S>(x1, y1, x2 - sz.width(), y2 - sz.height()); }
+
+	[[nodiscard]] friend inline constexpr bool operator==(const rect<T, S> & lhs, const rect<T, S> & rhs) {
+		return lhs.x1 == rhs.x1 && lhs.y1 == rhs.y1 && lhs.x2 == rhs.x2 && lhs.y2 == rhs.y2;
+	}
+
 private:
 	T x1, y1, x2, y2;
 };
+
+
+template <typename T, typename S>
+inline std::optional<rect<T, S>> intersect(const std::optional<rect<T, S>> & a, const rect<T, S> & b) {
+	if (!a.has_value())
+		return b;
+	return a->intersected(b);
+}
+
+template <typename T, typename S>
+inline std::optional<rect<T, S>> intersect(const std::optional<rect<T, S>> & a, const std::optional<rect<T, S>> & b) {
+	if (!a.has_value()) {
+		return b;
+	}
+	if (!b.has_value()) {
+		return a;
+	}
+
+	return a->intersected(b);
+}
+
+template <typename T, typename S>
+inline rect<T, S> unite(const std::optional<rect<T, S>> & a, const rect<T, S> & b) {
+	if (!a.has_value())
+		return b;
+	return a->united(b);
+}
 
 
 template <typename T, typename U>
