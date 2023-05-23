@@ -293,11 +293,11 @@ public:
 	inline constexpr void translate(T dx, T dy) noexcept { *this = translated(dx, dy); }
 	inline constexpr void translate(const point<T> & dt) noexcept { *this = translated(dt); }
 	[[nodiscard]] inline constexpr rect<T, S> adjusted(T dx1, T dy1, T dx2, T dy2) const noexcept {
-		return rect<T>(x1 + dx1, y1 + dy1, x2 + dx2, y2 + dy2);
+		return rect<T, S>(x1 + dx1, y1 + dy1, x2 + dx2, y2 + dy2);
 	}
 	inline constexpr void adjust(T dx1, T dy1, T dx2, T dy2) noexcept { *this = adjusted(dx1, dy1, dx2, dy2); }
 	[[nodiscard]] inline constexpr rect<T, S> expanded(T d) const noexcept {
-		return rect<T>(x1 - d, y1 - d, x2 + d, y2 + d);
+		return rect<T, S>(x1 - d, y1 - d, x2 + d, y2 + d);
 	}
 	[[nodiscard]] inline constexpr rect<T, S> shrinked(T d) const noexcept { return expanded(-d); }
 	[[nodiscard]] inline constexpr rect<T, S> united(const rect<T, S> & other) const {
