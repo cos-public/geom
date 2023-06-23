@@ -386,6 +386,13 @@ inline rect<T, S> unite(const std::optional<rect<T, S>> & a, const rect<T, S> & 
 	return a->united(b);
 }
 
+template <typename T, typename S>
+[[nodiscard]] inline rect<T, S> fit_rect(geom::size<S> sz, geom::rect<T, S> bounds) {
+	const auto fitted_sz = sz.fitted(bounds.size());
+	const geom::point<T> org{bounds.left() + (T) (bounds.width() - fitted_sz.width) / 2, bounds.top() + (T) (bounds.height() - fitted_sz.height) / 2};
+	return geom::rect<T, S>{org, fitted_sz};
+}
+
 
 template <typename T, typename U>
 point<T> clamp(point<T> pt, rect<T, U> bounds) {
