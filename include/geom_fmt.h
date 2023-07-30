@@ -11,14 +11,19 @@ namespace fmt {
 
 using namespace geom;
 
-template <typename T>
-struct formatter<point<T>> {
-	template <typename ParseContext>
-	constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
-
+template <typename T, typename Char>
+struct formatter<point<T>, Char> : fmt::formatter<T, Char> {
 	template <typename FormatContext>
 	auto format(const point<T> & pt, FormatContext &ctx) {
-		return format_to(ctx.out(), FMT_STRING("({}, {})"), pt.x, pt.y);
+		auto out = ctx.out();
+		*out = '(';
+		out = fmt::formatter<T>::format(pt.x, ctx);
+		static constexpr basic_string_view<Char> sep = ", ";
+		out = fmt::detail::copy_str<Char>(sep.begin(), sep.end(), out);
+		ctx.advance_to(out);
+		out = fmt::formatter<T>::format(pt.y, ctx);
+		*out = ')';
+		return out;
 	}
 };
 
