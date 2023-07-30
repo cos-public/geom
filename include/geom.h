@@ -10,6 +10,7 @@
 #include <optional>
 #include <cmath> /// for lroundf
 #include <stdexcept>
+#include <bit> /// for countl_zero
 
 /// point, size, rect classes
 
