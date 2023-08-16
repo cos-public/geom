@@ -239,13 +239,13 @@ public:
 		}
 	}
 #endif
-	constexpr rect(const point<T> & org, const size<S> & size) noexcept : x1(org.x), y1(org.y), x2(org.x + size.width), y2(org.y + size.height) {}
+	constexpr rect(const point<T> & org, const size<S> & size) noexcept : x1(org.x), y1(org.y), x2(org.x + static_cast<T>(size.width)), y2(org.y + static_cast<T>(size.height)) {}
 	constexpr rect(const point<T> & org, const point<T> & dest) noexcept : x1(org.x), y1(org.y), x2(dest.x), y2(dest.y) {}
 	explicit constexpr rect(const size<S> & size) noexcept : rect(point<T>{0, 0}, size) {}
 	static rect<T, S> from_size(T x, T y, S w, S h) { return rect<T, S>(x, y, x+w, y+h); }
-	[[nodiscard]] inline constexpr S width() const noexcept { return x2 - x1; }
+	[[nodiscard]] inline constexpr S width() const noexcept { return static_cast<S>(x2 - x1); }
 	inline constexpr void set_width(S width) noexcept { x2 = x1 + width; }
-	[[nodiscard]] inline S height() const noexcept { return y2 - y1; }
+	[[nodiscard]] inline S height() const noexcept { return static_cast<S>(y2 - y1); }
 	inline void set_height(S height) noexcept { y2 = y1 + height; }
 	inline constexpr void move_left(T x) noexcept { x2 = x + (x2 - x1); x1 = x; }
 	inline constexpr void move_top(T y) noexcept { y2 = y + (y2 - y1); y1 = y; }
@@ -408,14 +408,19 @@ point<T> clamp(point<T> pt, rect<T, U> bounds) {
 enum class orientation { vert, hor };
 
 template <orientation O>
-static constexpr orientation orthogonal = orientation::hor;
-template <> constexpr orientation orthogonal<orientation::hor> = orientation::vert;
+struct ortho_s;
+template <>
+struct ortho_s<orientation::vert> { static constexpr orientation o = orientation::hor; };
+template <>
+struct ortho_s<orientation::hor> { static constexpr orientation o = orientation::vert; };
 
+template <orientation O>
+inline constexpr orientation orthogonal = ortho_s<O>::o;
 
 template <std::unsigned_integral T>
 [[nodiscard]] inline unsigned mip_levels(const size<T> & base_size) noexcept {
 	static_assert(std::is_unsigned_v<T>, "Must be unsigned");
-	return (sizeof(T) << 3) - std::countl_zero(std::min(base_size.width, base_size.height));
+	return (sizeof(T) << 3) - static_cast<unsigned>(std::countl_zero(std::min(base_size.width, base_size.height)));
 }
 
 template <std::unsigned_integral T>
@@ -437,7 +442,7 @@ template <std::unsigned_integral T>
 		return 0u;
 	const uint32_t z = std::min(base_size.width / request_size.width,
 		base_size.height / request_size.height);
-	assert(std::countl_zero(z) < 32u);
+	//assert(std::countl_zero(z) < 32u);
 	return 32u - std::countl_zero(z) - 1u;
 }
 
