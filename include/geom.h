@@ -61,13 +61,16 @@ struct point {
 	point<U> cast() const { return point<U>{ .x = static_cast<U>(x), .y = static_cast<U>(y)}; }
 	template <typename U>
 	point<U> round() const;
-	template <>
-	point<int> round() const { return point<int>{ std::lroundf(x), std::lroundf(y) }; }
 	[[nodiscard]] T manhattan_length() const {
 		const auto & [min, max] = std::minmax(x, y);
 		return max - min;
 	}
 };
+
+template <> template <>
+inline point<int> point<float>::round() const {
+	return point<int>{ static_cast<int>(std::lroundf(x)), static_cast<int>(std::lroundf(y)) };
+}
 
 template <typename T>
 [[nodiscard]] inline constexpr point<T> operator/(const T lhs, const point<T> & rhs) {
@@ -167,8 +170,6 @@ public:
 
 	template <typename U>
 	size<U> round() const;
-	template <>
-	size<unsigned> round() const { return size<unsigned>{ std::lroundf(width), std::lroundf(height) }; }
 
 	[[nodiscard]] inline size<T> fitted(size<T> bounds) const {
 		const float zw = (float) bounds.width / width;
@@ -180,6 +181,12 @@ public:
 		}
 	}
 };
+
+template <> template <>
+inline size<unsigned> size<float>::round() const {
+	return size<unsigned>{ static_cast<unsigned>(std::lroundf(width)), static_cast<unsigned>(std::lroundf(height)) };
+}
+
 
 template<typename T>
 [[nodiscard]] inline size<T> operator+ (size<T> lhs, const size<T> & rhs) { lhs += rhs; return lhs; }
@@ -274,7 +281,7 @@ public:
 	[[nodiscard]] inline constexpr point<T> top_right() const noexcept { return point<T>{x2, y1}; }
 	[[nodiscard]] inline constexpr point<T> bottom_left() const noexcept { return point<T>{x1, y2}; }
 	[[nodiscard]] inline constexpr point<T> bottom_right() const noexcept { return point<T>{x2, y2}; }
-	[[nodiscard]] inline constexpr size<S> size() const noexcept { return geom::size<S>{ width(), height() }; }
+	[[nodiscard]] inline constexpr geom::size<S> size() const noexcept { return geom::size<S>{ width(), height() }; }
 	[[nodiscard]] inline constexpr point<T> center() const noexcept {
 		return point<T>{
 			x1 + static_cast<T>(x2 - x1) / T{2},
