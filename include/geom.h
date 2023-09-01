@@ -260,12 +260,13 @@ public:
 	inline constexpr void move_bottom(T y) noexcept { y1 = y - (y2 - y1); y2 = y; }
 	inline constexpr void move(T x, T y) noexcept { x2 = x + (x2 - x1); y2 = y + (y2 - y1); x1 = x; y1 = y; }
 	inline constexpr void move(const point<T> & org) noexcept { move(org.x, org.y); }
-	inline constexpr void move_center(T cx, T cy) noexcept {
+	inline constexpr rect<T, S> & move_center(T cx, T cy) noexcept {
 		const auto w = width(); const auto h = height();
 		x1 = cx - w / 2; y1 = cy - h / 2;
 		x2 = x1 + w; y2 = y1 + h;
+		return *this;
 	}
-	inline constexpr void move_center(const point<T> c) noexcept { move_center(c.x, c.y); }
+	inline constexpr rect<T, S> & move_center(const point<T> c) noexcept { return move_center(c.x, c.y); }
 	inline constexpr void resize(const size<S> & size) noexcept { x2 = x1 + size.width; y2 = y1 + size.height; }
 	[[nodiscard]] inline constexpr T top() const noexcept { return y1; }
 	[[nodiscard]] inline constexpr T left() const noexcept { return x1; }
