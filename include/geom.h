@@ -66,8 +66,8 @@ struct point {
 		return max - min;
 	}
 	point<T> & rotate(float angle_rad) {
-		const auto c = std::cosf(angle_rad);
-		const auto s = std::sinf(angle_rad);
+		const float c = std::cos(angle_rad);
+		const float s = std::sin(angle_rad);
 		x = x * c - y * s;
 		y = y * c + x * s;
 		return *this;
