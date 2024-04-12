@@ -110,7 +110,7 @@ template <typename T>
 
 #ifdef _WIN32
 
-/// usage: ::ScreenToClient(*this, gfx::pPOINT_adapter(pt));
+/// usage: ::ScreenToClient(*this, geom::pPOINT_adapter(pt));
 template <typename T>
 class pPOINT_adapter {
 public:
@@ -374,6 +374,32 @@ public:
 private:
 	T x1, y1, x2, y2;
 };
+
+#ifdef _WIN32
+
+/// usage: DrawText(dc, "Hello", -1, geom::pRECT_adapter(rc), 0);
+template <typename T, typename S>
+class pRECT_adapter {
+public:
+	pRECT_adapter(rect<T, S> & rc) : rc{rc}, rrc{ rc.left(), rc.top(), rc.right(), rc.bottom() } {
+	}
+
+	~pRECT_adapter() {
+		rc.rleft() = rrc.left;
+		rc.rtop() = rrc.top;
+		rc.rright() = rrc.right;
+		rc.rbottom() = rrc.bottom;
+	}
+
+	operator RECT *() {
+		return &rrc;
+	}
+
+private:
+	rect<T, S> & rc;
+	RECT rrc;
+};
+#endif //_WIN32
 
 
 template <typename T, typename S>
