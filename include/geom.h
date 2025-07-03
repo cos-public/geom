@@ -66,8 +66,8 @@ struct point {
 		return max - min;
 	}
 	point<T> & rotate(float angle_rad) {
-		const float c = std::cos(angle_rad);
-		const float s = std::sin(angle_rad);
+		const auto c = std::cosf(angle_rad);
+		const auto s = std::sinf(angle_rad);
 		x = x * c - y * s;
 		y = y * c + x * s;
 		return *this;
@@ -110,7 +110,7 @@ template <typename T>
 
 #ifdef _WIN32
 
-/// usage: ::ScreenToClient(*this, geom::pPOINT_adapter(pt));
+/// usage: ::ScreenToClient(*this, gfx::pPOINT_adapter(pt));
 template <typename T>
 class pPOINT_adapter {
 public:
@@ -275,6 +275,7 @@ public:
 	}
 	inline constexpr rect<T, S> & move_center(const point<T> c) noexcept { return move_center(c.x, c.y); }
 	inline constexpr void resize(const size<S> & size) noexcept { x2 = x1 + size.width; y2 = y1 + size.height; }
+	inline constexpr void resize(S width, S height) noexcept { x2 = x1 + width; y2 = y1 + height; }
 	[[nodiscard]] inline constexpr T top() const noexcept { return y1; }
 	[[nodiscard]] inline constexpr T left() const noexcept { return x1; }
 	[[nodiscard]] inline constexpr T bottom() const noexcept { return y2; }
@@ -374,32 +375,6 @@ public:
 private:
 	T x1, y1, x2, y2;
 };
-
-#ifdef _WIN32
-
-/// usage: DrawText(dc, "Hello", -1, geom::pRECT_adapter(rc), 0);
-template <typename T, typename S>
-class pRECT_adapter {
-public:
-	pRECT_adapter(rect<T, S> & rc) : rc{rc}, rrc{ rc.left(), rc.top(), rc.right(), rc.bottom() } {
-	}
-
-	~pRECT_adapter() {
-		rc.rleft() = rrc.left;
-		rc.rtop() = rrc.top;
-		rc.rright() = rrc.right;
-		rc.rbottom() = rrc.bottom;
-	}
-
-	operator RECT *() {
-		return &rrc;
-	}
-
-private:
-	rect<T, S> & rc;
-	RECT rrc;
-};
-#endif //_WIN32
 
 
 template <typename T, typename S>
