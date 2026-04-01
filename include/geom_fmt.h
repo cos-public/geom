@@ -14,15 +14,14 @@ using namespace geom;
 template <typename T, typename Char>
 struct formatter<point<T>, Char> : fmt::formatter<T, Char> {
 	template <typename FormatContext>
-	auto format(const point<T> & pt, FormatContext &ctx) {
+	auto format(const point<T> & pt, FormatContext &ctx) const {
 		auto out = ctx.out();
-		*out = '(';
-		out = fmt::formatter<T>::format(pt.x, ctx);
-		static constexpr basic_string_view<Char> sep = ", ";
-		out = fmt::detail::copy_str<Char>(sep.begin(), sep.end(), out);
+		out = fmt::format_to(out, FMT_STRING("("));
+		out = fmt::formatter<T, Char>::format(pt.x, ctx);
+		out = fmt::format_to(out, FMT_STRING(", "));
 		ctx.advance_to(out);
-		out = fmt::formatter<T>::format(pt.y, ctx);
-		*out = ')';
+		out = fmt::formatter<T, Char>::format(pt.y, ctx);
+		out = fmt::format_to(out, FMT_STRING(")"));
 		return out;
 	}
 };
@@ -33,7 +32,7 @@ struct formatter<size<T>> {
 	constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
 
 	template <typename FormatContext>
-	auto format(const size<T> & sz, FormatContext &ctx) {
+	auto format(const size<T> & sz, FormatContext &ctx) const {
 		/// \u00D7 == \xC3\x97
 		return format_to(ctx.out(), FMT_STRING("[{}" "\xC3\x97" "{}]"), sz.width, sz.height);
 	}
@@ -45,7 +44,7 @@ struct formatter<rect<T, S>> {
 	constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
 
 	template <typename FormatContext>
-	auto format(const rect<T, S> & r, FormatContext &ctx) {
+	auto format(const rect<T, S> & r, FormatContext &ctx) const {
 		return format_to(ctx.out(), FMT_STRING("{} {} {}"), r.top_left(), r.bottom_right(), r.size());
 	}
 };
